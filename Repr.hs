@@ -68,11 +68,13 @@ data Repr a = S { value    :: a        -- ^ Extract the value of the @Repr@.
 {-| To render you need to supply the precedence and fixity of the
 enclosing context.
 
+(For rendering /top-level/ values see 'render'.)
+
 For more documentation about precedence and fixity see:
 
 <http://haskell.org/onlinereport/decls.html#sect4.4.2>
 
-The reason the renderer returns a 'DString' instead of for example a 'String'
+The reason the renderer returns a 'DString', instead of a 'String' for example,
 is that the rendering of numeric expression involves lots of left-factored
 appends i.e.: @((a ++ b) ++ c) ++ d@. A 'DString' has a O(1) append operation
 while a 'String' just has a O(n) append. So choosing a 'DString' is more
@@ -87,6 +89,10 @@ type Renderer = Precedence ->  Fixity -> DString
  * Function application always has precedence 10.
 -}
 type Precedence = Int
+
+-- | Precedence of function application.
+funAppPrec :: Precedence
+funAppPrec = 10
 
 -- | Fixity of operators.
 data Fixity = Non -- ^ No fixity information.
@@ -105,7 +111,8 @@ render r = toString $ renderer r 0 Non
 
 {-| @x \<?\> s@ annotates the rendering with the given string.
 
-The output wil look like: @\"({\- s -\} ...)\"@ where @...@ is the rendering of @x@.
+The rendering wil look like: @\"({\- s -\} ...)\"@ where @...@ is the rendering
+of @x@.
 
 This combinator is handy when you want to render the ouput of a
 function and you want to see how the parameters of the function
@@ -130,7 +137,8 @@ The rendering will then look like:
 @
 -}
 (<?>) :: Repr a -> DString -> Repr a
-(S x rx) <?> s = S x $ \prec fixity -> paren (between "{- " " -}" s <+> rx prec fixity)
+(S x rx) <?> s =
+    S x $ \_ _ -> paren (between "{- " " -}" s <+> rx 0 Non)
 
 
 --------------------------------------------------------------------------------
@@ -162,9 +170,9 @@ instance Integral a => Integral (Repr a) where
     toInteger   = to   toInteger
 
 instance Fractional a => Fractional (Repr a) where
-    (/)          = infx L 7 (*)         "/"
-    recip        = app     recip        "recip"
-    fromRational = from    fromRational "fromRational"
+    (/)          = infx L 7 (*)          "/"
+    recip        = app      recip        "recip"
+    fromRational = from     fromRational "fromRational"
 
 instance Floating a => Floating (Repr a) where
     pi      = constant pi      "pi"
@@ -212,10 +220,14 @@ instance Enum a => Enum (Repr a) where
     pred     = app   pred   "pred"
     toEnum   = from  toEnum "toEnum"
     fromEnum = to    fromEnum
-    enumFrom       (S x rx)                   = enum "From"       (enumFrom       x)     [rx]
-    enumFromThen   (S x rx) (S y ry)          = enum "FromThen"   (enumFromThen   x y)   [rx, ry]
-    enumFromTo     (S x rx) (S y ry)          = enum "FromTo"     (enumFromTo     x y)   [rx, ry]
-    enumFromThenTo (S x rx) (S y ry) (S z rz) = enum "FromThenTo" (enumFromThenTo x y z) [rx, ry, rz]
+    enumFrom       (S x rx) = enum "From"       (enumFrom       x)     [rx]
+    enumFromThen   (S x rx)
+                   (S y ry) = enum "FromThen"   (enumFromThen   x y)   [rx, ry]
+    enumFromTo     (S x rx)
+                   (S y ry) = enum "FromTo"     (enumFromTo     x y)   [rx, ry]
+    enumFromThenTo (S x rx)
+                   (S y ry)
+                   (S z rz) = enum "FromThenTo" (enumFromThenTo x y z) [rx, ry, rz]
 
 enum :: DString -> [a] -> [Renderer] -> [Repr a]
 enum enumStr xs rxs = zipWith combine [0..] xs
@@ -247,10 +259,6 @@ instance IsString a => IsString (Repr a) where
 constant :: a -> DString -> Repr a
 constant x xStr = S x $ \_ _ -> xStr
 
--- | Precedence of function application.
-funAppPrec :: Precedence
-funAppPrec = 10
-
 {-| Given a function @f@ and the name of that function @fStr@ return
 a function that takes a 'Show'able argument @x@ and returns a 'Repr'
 that has @f x@ as value and @fStr@ prepended to the showed @x@ as
@@ -266,13 +274,15 @@ For example:
 @
 -}
 from :: Show a => (a -> b) -> DString -> (a -> Repr b)
-from f fStr = \x -> S (f x) $ fStr `apply` fromShowS (showsPrec funAppPrec x)
+from f fStr =
+    \x -> S (f x) $ fStr `apply` fromShowS (showsPrec funAppPrec x)
 
 -- | Same as 'from' with the difference that the given function has two arguments.
 from2 :: (Show a, Show b) => (a -> b -> c) -> DString -> (a -> b -> Repr c)
-from2 f fStr = \x y -> S (f x y) $ fStr `apply`(     fromShowS (showsPrec funAppPrec x)
-                                                 <+> fromShowS (showsPrec funAppPrec y)
-                                               )
+from2 f fStr =
+    \x y -> S (f x y) $ fStr `apply`(   fromShowS (showsPrec funAppPrec x)
+                                    <+> fromShowS (showsPrec funAppPrec y)
+                                    )
 
 -- | Return the converted value of the 'Repr'.
 to :: (a -> b) -> (Repr a -> b)
@@ -315,7 +325,10 @@ app2 :: (a -> b -> c) -> DString -> (Repr a -> Repr b -> Repr c)
 app2 f fStr =
     \(S x rx) (S y ry) -> S (f x y) $ fStr `apply` args [rx, ry]
 
-{-|
+{-| Given the fixity, precedence, the actual operator @op@ and the name of the
+operator @opStr@ return a function that takes two @Repr@s: @rx@ and @ry@ and
+returns a @Repr@ that has as value @value rx `op` value ry@ and as renderer
+@opStr@ in between the rendering of @rx@ and @ry@.
 
 For example:
 @

@@ -1,5 +1,5 @@
 name:          repr
-version:       0.1
+version:       0.2
 cabal-version: >= 1.6
 build-type:    Simple
 stability:     experimental
@@ -25,9 +25,9 @@ source-repository head
   Location: http://code.haskell.org/~basvandijk/code/repr
 
 library
-  build-depends:     base               >= 3   && < 4.2
-                   , string-combinators >= 0.4 && < 0.5
-                   , to-string-class    >= 0.1 && < 0.2
-                   , dstring            >= 0.3 && < 0.4
+  build-depends:     base               >= 3       && < 4.2
+                   , string-combinators >= 0.4     && < 0.5
+                   , to-string-class    >= 0.1.2   && < 0.2
+                   , dstring            >= 0.3.0.1 && < 0.4
   exposed-modules: Repr
   ghc-options:     -Wall -O2

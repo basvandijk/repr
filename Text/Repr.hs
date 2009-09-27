@@ -65,7 +65,7 @@ import Control.Arrow           ( first )
 {-| @Repr a@ is a value of type @a@ paired with a way to render that value to
 its textual representation.
 
-Note that @Repr a@ is overloaded for most classes in 'base' provided that @a@
+Note that @Repr a@ has an instance for most classes in 'base' provided that @a@
 has instances for the respected classes. This allows you to write a numeric
 expression of type @Repr a@. For example:
 

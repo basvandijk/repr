@@ -1,5 +1,5 @@
 name:          repr
-version:       0.2
+version:       0.3
 cabal-version: >= 1.6
 build-type:    Simple
 stability:     experimental
@@ -11,7 +11,7 @@ license:       BSD3
 license-file:  LICENSE
 category:      Numeric, Text
 synopsis:      Render numeric expressions to their textual representation.
-description:   This library allows you to render a numeric expression to its
+description:   This library allows you to render numeric expressions to their
                textual representation. For example:
                .
                @
@@ -25,9 +25,10 @@ source-repository head
   Location: http://code.haskell.org/~basvandijk/code/repr
 
 library
-  build-depends:     base               >= 3       && < 4.2
-                   , string-combinators >= 0.4     && < 0.5
-                   , to-string-class    >= 0.1.2   && < 0.2
+  build-depends:     base               >= 3 && < 4.2
+                   , random             >= 1.0 && < 1.1
+                   , string-combinators == 0.4.*
+                   , to-string-class    >= 0.1.2 && < 0.2
                    , dstring            >= 0.3.0.1 && < 0.4
-  exposed-modules: Repr
+  exposed-modules: Text.Repr
   ghc-options:     -Wall -O2

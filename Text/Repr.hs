@@ -54,6 +54,17 @@ import Data.Bits               ( Bits
 import Data.Fixed              ( HasResolution, resolution )
 import Data.Ix                 ( Ix, range, index, inRange, rangeSize )
 import System.Random           ( Random, randomR, random )
+import Foreign.Storable        ( Storable
+                               , sizeOf
+                               , alignment
+                               , peekElemOff
+                               , pokeElemOff
+                               , peekByteOff
+                               , pokeByteOff
+                               , peek
+                               , poke
+                               )
+import Foreign.Ptr             ( castPtr )
 import Control.Applicative     ( liftA2 )
 import Control.Arrow           ( first )
 
@@ -151,7 +162,7 @@ The rendering will then look like:
 @
 -}
 (<?>) :: Repr a -> DString -> Repr a
-(Repr x rx) <?> s = constant x $ paren (between "{- " " -}" s <+> topLevel rx)
+(Repr x rx) <?> s = constant x $ topLevel rx `annotateWith` s
 
 {-| @pure x@ constructs a 'Repr' which has @x@ as value and the showed @x@
 as rendering. For example:
@@ -165,7 +176,7 @@ as rendering. For example:
 @
 -}
 pure :: Show a => a -> Repr a
-pure x = Repr x $ \prec _ -> showsPrecDS prec x
+pure x = Repr x $ \prec _ -> fromShowS $ showsPrec prec x
 
 
 --------------------------------------------------------------------------------
@@ -329,6 +340,34 @@ instance Ix a => Ix (Repr a) where
     inRange   (b, e) p = inRange   (extract b, extract e) (extract p)
     rangeSize (b, e)   = rangeSize (extract b, extract e)
 
+instance Storable a => Storable (Repr a) where
+    sizeOf    = to sizeOf
+    alignment = to alignment
+
+    peekElemOff rPtr off   = do
+      x <- peekElemOff (castPtr rPtr) off
+      return $ Repr x $
+                 "peekElemOff" `apply` (   (showFuncArg rPtr `annotateWith` "Ptr")
+                                       <+> showFuncArg off
+                                       )
+
+    pokeElemOff rPtr off r = pokeElemOff (castPtr rPtr) off (extract r)
+
+    peekByteOff ptr off = do
+      x <- peekByteOff ptr off
+      return $ Repr x $
+                 "peekByteOff" `apply` (   (showFuncArg ptr `annotateWith` "Ptr")
+                                       <+> showFuncArg off
+                                       )
+
+    pokeByteOff ptr off r = pokeByteOff ptr off (extract r)
+
+    peek rPtr = do
+      x <- peek (castPtr rPtr)
+      return $ Repr x $ "peek" `apply` (showFuncArg rPtr `annotateWith` "Ptr")
+
+    poke rPtr r = poke (castPtr rPtr) (extract r)
+
 instance (Random a, Show a) => Random (Repr a) where
     randomR (b, e) = first pure . randomR (extract b, extract e)
     random         = first pure . random
@@ -338,24 +377,25 @@ instance (Random a, Show a) => Random (Repr a) where
 -- Utility functions
 --------------------------------------------------------------------------------
 
+annotateWith :: DString -> DString -> DString
+s `annotateWith` a = paren $ between "{- " " -}" a <+> s
+
 topLevel :: Renderer -> DString
 topLevel r = r 0 Non
 
 constant :: a -> DString -> Repr a
 constant x xStr = Repr x $ \_ _ -> xStr
 
-showsPrecDS :: Show a => Precedence -> a -> DString
-showsPrecDS prec = fromShowS . showsPrec prec
+showFuncArg :: Show a => a -> DString
+showFuncArg = fromShowS . showsPrec funAppPrec
 
 from :: Show a => (a -> b) -> DString -> (a -> Repr b)
 from f fStr =
-    \x -> Repr (f x) $ fStr `apply` showsPrecDS funAppPrec x
+    \x -> Repr (f x) $ fStr `apply` showFuncArg x
 
 from2 :: (Show a, Show b) => (a -> b -> c) -> DString -> (a -> b -> Repr c)
 from2 f fStr =
-    \x y -> Repr (f x y) $ fStr `apply`(   showsPrecDS funAppPrec x
-                                       <+> showsPrecDS funAppPrec y
-                                       )
+    \x y -> Repr (f x y) $ fStr `apply`(showFuncArg x <+> showFuncArg y)
 
 to :: (a -> b) -> (Repr a -> b)
 to f = f . extract
@@ -374,7 +414,8 @@ app2 f fStr =
 app2Show :: Show b => (a -> b -> a) -> DString -> (Repr a -> b -> Repr a)
 app2Show f fStr =
     \(Repr x rx) y ->
-        Repr (f x y) (fStr `applies` [rx, \prec _ -> showsPrecDS prec y])
+        Repr (f x y)
+             (fStr `applies` [rx, \prec _ -> fromShowS $ showsPrec prec y])
 
 infx :: Fixity -> Precedence -> (a -> b -> c) -> DString
      -> (Repr a -> Repr b -> Repr c)

@@ -1,5 +1,5 @@
 name:          repr
-version:       0.3
+version:       0.3.1
 cabal-version: >= 1.6
 build-type:    Simple
 stability:     experimental

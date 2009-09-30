@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Text.Repr
@@ -53,7 +54,6 @@ import Data.Bits               ( Bits
                                )
 import Data.Fixed              ( HasResolution, resolution )
 import Data.Ix                 ( Ix, range, index, inRange, rangeSize )
-import System.Random           ( Random, randomR, random )
 import Foreign.Storable        ( Storable
                                , sizeOf
                                , alignment
@@ -65,8 +65,14 @@ import Foreign.Storable        ( Storable
                                , poke
                                )
 import Foreign.Ptr             ( castPtr )
+import Data.Typeable           ( Typeable, typeOf)
+import System.Random           ( Random, randomR, random )
 import Control.Applicative     ( liftA2 )
 import Control.Arrow           ( first )
+
+#if MIN_VERSION_base(4,0,0)
+import Control.Exception       ( Exception, toException, fromException )
+#endif
 
 
 --------------------------------------------------------------------------------
@@ -75,6 +81,9 @@ import Control.Arrow           ( first )
 
 {-| @Repr a@ is a value of type @a@ paired with a way to render that value to
 its textual representation.
+
+@Repr@s follow the property that given a @Repr@ @r@ if you evaluate the textual
+representation of @r@ you should get the value or @r@.
 
 Note that @Repr a@ has an instance for most classes in 'base' provided that @a@
 has instances for the respected classes. This allows you to write a numeric
@@ -109,11 +118,11 @@ For more documentation about precedence and fixity see:
 
 <http://haskell.org/onlinereport/decls.html#sect4.4.2>
 
-The reason the renderer returns a 'DString', instead of for example a 'String',
-is that the rendering of numeric expression involves lots of left-factored
-appends i.e.: @((a ++ b) ++ c) ++ d@. A 'DString' has a O(1) append operation
-while a 'String' just has a O(n) append. So choosing a 'DString' is more
-efficient.
+The reason the renderer returns a 'DString', instead of for example a 'String'
+has to do with efficiency.  The rendering of expressions involves lots of
+left-factored appends i.e.: @((a ++ b) ++ c) ++ d@. A 'DString', which is
+equivalent to a 'ShowS', has a O(1) append operation while a 'String' has a O(n)
+append.
 -}
 type Renderer = Precedence ->  Fixity -> DString
 
@@ -340,33 +349,42 @@ instance Ix a => Ix (Repr a) where
     inRange   (b, e) p = inRange   (extract b, extract e) (extract p)
     rangeSize (b, e)   = rangeSize (extract b, extract e)
 
-instance Storable a => Storable (Repr a) where
+instance (Show a, Storable a) => Storable (Repr a) where
     sizeOf    = to sizeOf
     alignment = to alignment
 
-    peekElemOff rPtr off   = do
+    peekElemOff rPtr off = do
       x <- peekElemOff (castPtr rPtr) off
-      return $ Repr x $
-                 "peekElemOff" `apply` (   (showFuncArg rPtr `annotateWith` "Ptr")
-                                       <+> showFuncArg off
-                                       )
-
-    pokeElemOff rPtr off r = pokeElemOff (castPtr rPtr) off (extract r)
+      return $ pure x <?> ("peekElemOff" <+> showFuncArg rPtr <+> showFuncArg off)
 
     peekByteOff ptr off = do
       x <- peekByteOff ptr off
-      return $ Repr x $
-                 "peekByteOff" `apply` (   (showFuncArg ptr `annotateWith` "Ptr")
-                                       <+> showFuncArg off
-                                       )
-
-    pokeByteOff ptr off r = pokeByteOff ptr off (extract r)
+      return $ pure x <?> ("peekByteOff" <+> showFuncArg ptr <+> showFuncArg off)
 
     peek rPtr = do
       x <- peek (castPtr rPtr)
-      return $ Repr x $ "peek" `apply` (showFuncArg rPtr `annotateWith` "Ptr")
+      return $ pure x <?> ("peek" <+> showFuncArg rPtr)
 
-    poke rPtr r = poke (castPtr rPtr) (extract r)
+    poke        rPtr     r = poke        (castPtr rPtr)     (extract r)
+    pokeElemOff rPtr off r = pokeElemOff (castPtr rPtr) off (extract r)
+    pokeByteOff  ptr off r = pokeByteOff ptr            off (extract r)
+
+instance Typeable a => Typeable (Repr a) where
+    typeOf = to typeOf
+
+#if MIN_VERSION_base(4,0,0)
+instance Exception a => Exception (Repr a) where
+    toException = to toException
+    fromException se =
+        fmap (\x -> pure x <?> ( "fromJust"
+                               <+> paren ( "fromException"
+                                         <+> paren ( "toException"
+                                                   <+> paren (showFuncArg x)
+                                                   )
+                                         )
+                               )
+             ) $ fromException se
+#endif
 
 instance (Random a, Show a) => Random (Repr a) where
     randomR (b, e) = first pure . randomR (extract b, extract e)

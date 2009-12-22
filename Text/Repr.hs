@@ -1,8 +1,12 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE UnicodeSyntax #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Text.Repr
     ( Repr
+    , repr
     , extract
     , renderer
     , Renderer
@@ -17,77 +21,73 @@ module Text.Repr
 -- Imports
 --------------------------------------------------------------------------------
 
-import Data.String             ( IsString, fromString )
-import Data.String.ToString    ( ToString, toString )
-import Data.String.Combinators ( (<>)
-                               , (<+>)
-                               , between
-                               , paren
-                               , thenParen
-                               , brackets
-                               , punctuate
-                               , fromShow
-                               , integer
-                               , int
-                               , hsep
+-- from base:
+import Prelude                 ( Eq(..)
+                               , Ord(..)
+                               , Enum(..)
+                               , Bounded(..)
+                               , Num(..)
+                               , Real(..)
+                               , Integral(..)
+                               , Fractional(..)
+                               , Floating(..)
+                               , RealFrac(..)
+                               , RealFloat(..)
+                               , undefined
                                )
-import Data.DString            ( DString, fromShowS, toShowS )
-import Data.Monoid             ( Monoid, mempty, mappend, mconcat )
-import Data.Bits               ( Bits
-                               , (.&.)
-                               , (.|.)
-                               , xor
-                               , complement
-                               , shift
-                               , rotate
-                               , bit
-                               , setBit
-                               , clearBit
-                               , complementBit
-                               , testBit
-                               , bitSize
-                               , isSigned
-                               , shiftL
-                               , shiftR
-                               , rotateL
-                               , rotateR
-                               )
-import Data.Fixed              ( HasResolution, resolution )
-import Data.Ix                 ( Ix, range, index, inRange, rangeSize )
-import Foreign.Storable        ( Storable
-                               , sizeOf
-                               , alignment
-                               , peekElemOff
-                               , pokeElemOff
-                               , peekByteOff
-                               , pokeByteOff
-                               , peek
-                               , poke
-                               )
+import Data.String             ( IsString(..) )
+import Data.Monoid             ( Monoid(..) )
+import Data.Bits               ( Bits(..) )
+import Data.Function           ( ($) )
+import Data.Fixed              ( HasResolution(..) )
+import Data.List               ( foldr, map, zipWith, take, length )
+import Data.Int                ( Int )
+import Data.Ix                 ( Ix(..) )
+import Foreign.Storable        ( Storable(..) )
 import Foreign.Ptr             ( castPtr )
 import Data.Typeable           ( Typeable, typeOf)
-import System.Random           ( Random, randomR, random )
 import Control.Applicative     ( liftA2 )
+import Control.Monad           ( return, (>>=), fail, fmap )
 import Control.Arrow           ( first )
+import Text.Show               ( Show(..) )
+import Text.Read               ( Read(..) )
 
 #if MIN_VERSION_base(4,0,0)
-import Control.Exception       ( Exception, toException, fromException )
+import Control.Exception       ( Exception(..) )
 #endif
+
+-- from base-unicode-symbols:
+import Data.Function.Unicode   ( (∘) )
+import Data.Bool.Unicode       ( (∧), (∨) )
+
+-- from random:
+import System.Random           ( Random(..) )
+
+-- from to-string-class:
+import Data.String.ToString    ( ToString(..) )
+
+-- from string-combinators:
+import Data.String.Combinators ( (<>), (<+>)
+                               , between, paren, thenParen, brackets
+                               , punctuate, fromShow, integer, int, hsep
+                               )
+-- from dstring:
+import Data.DString            ( DString, fromShowS, toShowS )
 
 
 --------------------------------------------------------------------------------
 -- Repr
 --------------------------------------------------------------------------------
 
-{-| @Repr a@ is a value of type @a@ paired with a way to render that value to
+{-| @Repr &#945;@ is a value of type @&#945;@ paired with a way to render that value to
 its textual representation.
 
 @Repr@s follow the property that given a @Repr@ @r@ if you evaluate the textual
 representation of @r@ you should get the value or @r@.
 
-Note that @Repr a@ has an instance for most classes in 'base' provided that @a@
+Note that @Repr &#945;@ has an instance for most classes in 'base' provided that @&#945;@
 has instances for the respected classes. This allows you to write a numeric
-expression of type @Repr a@. For example:
+expression of type @Repr &#945;@. For example:
 
 @
 *Repr> let r = 1.5 + 2 + (3 + (-4) * (5 - pi / sqrt 6)) :: Repr Double
@@ -107,9 +107,13 @@ And you can render @r@ to its textual representation using 'show':
 \"fromRational (3 % 2) + fromInteger 2 + (fromInteger 3 + negate (fromInteger 4) * (fromInteger 5 - pi / sqrt (fromInteger 6)))\"
 @
 -}
-data Repr a = Repr { extract  :: a        -- ^ Extract the value of the @Repr@.
-                   , renderer :: Renderer -- ^ Extract the renderer of the @Repr@.
+data Repr α = Repr { extract  ∷ α        -- ^ Extract the value of the @Repr@.
+                   , renderer ∷ Renderer -- ^ Extract the renderer of the @Repr@.
                    }
+
+-- | Construct a @Repr@ from the given value and its renderer.
+repr ∷ α → Renderer → Repr α
+repr = Repr
 
 {-| To render you need to supply the precedence and fixity of the
 enclosing context.
@@ -124,7 +128,7 @@ left-factored appends i.e.: @((a ++ b) ++ c) ++ d@. A 'DString', which is
 equivalent to a 'ShowS', has a O(1) append operation while a 'String' has a O(n)
 append.
 -}
-type Renderer = Precedence ->  Fixity -> DString
+type Renderer = Precedence → Fixity → DString
 
 {-| The precedence of operators and function application.
 
@@ -135,7 +139,7 @@ type Renderer = Precedence ->  Fixity -> DString
 type Precedence = Int
 
 -- | Precedence of function application.
-funAppPrec :: Precedence
+funAppPrec ∷ Precedence
 funAppPrec = 10
 
 -- | Fixity of operators.
@@ -170,7 +174,7 @@ The rendering will then look like:
 \"({\- p0 -\} fromInteger 1) * ({\- p0 -\} fromInteger 1) + sqrt ({\- p1 -\} (fromInteger 2)) * enumFrom ({\- p2 -\} (fromInteger 3)) !! 10\"
 @
 -}
-(<?>) :: Repr a -> DString -> Repr a
+(<?>) ∷ Repr α → DString → Repr α
 (Repr x rx) <?> s = constant x $ paren $ between "{- " " -}" s <+> topLevel rx
 
 {-| @pure x@ constructs a 'Repr' which has @x@ as value and the showed @x@
@@ -184,20 +188,20 @@ as rendering. For example:
 \"[1,2,3]\"
 @
 -}
-pure :: Show a => a -> Repr a
-pure x = Repr x $ \prec _ -> fromShowS $ showsPrec prec x
+pure ∷ Show α => α → Repr α
+pure x = Repr x $ \prec _ → fromShowS $ showsPrec prec x
 
 
 --------------------------------------------------------------------------------
 -- Instances
 --------------------------------------------------------------------------------
 
-instance Show (Repr a) where
+instance Show (Repr α) where
     showsPrec prec r = toShowS $ renderer r prec Non
 
-instance Read a => Read (Repr a) where
+instance Read α => Read (Repr α) where
     readsPrec prec str =
-        map (\(x, rst) -> ( constant x $
+        map (\(x, rst) → ( constant x $
                               fromString $
                                 take (length str - length rst)
                                      str
@@ -205,39 +209,39 @@ instance Read a => Read (Repr a) where
                           )
             ) $ readsPrec prec str
 
-instance IsString a => IsString (Repr a) where
+instance IsString α => IsString (Repr α) where
     fromString = liftA2 constant fromString fromShow
 
-instance ToString a => ToString (Repr a) where
+instance ToString α => ToString (Repr α) where
     toString = to toString
 
-instance Num a => Num (Repr a) where
-    fromInteger = from     fromInteger "fromInteger"
-    (+)         = infx L 6 (+)         "+"
-    (-)         = infx L 6 (-)         "-"
-    (*)         = infx L 7 (*)         "*"
-    negate      = app      negate      "negate"
-    abs         = app      abs         "abs"
-    signum      = app      signum      "signum"
+instance Num α => Num (Repr α) where
+    fromInteger n = repr (fromInteger n) $ \p _ → fromShowS $ showsPrec p n
+    (+)           = infx L 6 (+)         "+"
+    (-)           = infx L 6 (-)         "-"
+    (*)           = infx L 7 (*)         "*"
+    negate        = app      negate      "negate"
+    abs           = app      abs         "abs"
+    signum        = app      signum      "signum"
 
-instance Real a => Real (Repr a) where
+instance Real α => Real (Repr α) where
     toRational = to toRational
 
-instance Integral a => Integral (Repr a) where
-    quot        = app2 quot    "quot"
-    rem         = app2 rem     "rem"
-    div         = app2 div     "div"
-    mod         = app2 mod     "mod"
-    quotRem     = tup  quotRem "quotRem"
-    divMod      = tup  divMod  "divMod"
-    toInteger   = to   toInteger
+instance Integral α => Integral (Repr α) where
+    quot      = app2 quot    "quot"
+    rem       = app2 rem     "rem"
+    div       = app2 div     "div"
+    mod       = app2 mod     "mod"
+    quotRem   = tup  quotRem "quotRem"
+    divMod    = tup  divMod  "divMod"
+    toInteger = to   toInteger
 
-instance Fractional a => Fractional (Repr a) where
+instance Fractional α => Fractional (Repr α) where
     (/)          = infx L 7 (*)          "/"
     recip        = app      recip        "recip"
     fromRational = from     fromRational "fromRational"
 
-instance Floating a => Floating (Repr a) where
+instance Floating α => Floating (Repr α) where
     pi      = constant pi      "pi"
     (**)    = infx R 8 (**)    "**"
     logBase = app2     logBase "logBase"
@@ -257,12 +261,12 @@ instance Floating a => Floating (Repr a) where
     atanh   = app      atanh   "atanh"
     acosh   = app      acosh   "acosh"
 
-instance RealFrac a => RealFrac (Repr a) where
+instance RealFrac α => RealFrac (Repr α) where
     properFraction (Repr x rx) =
         let (n, f) = properFraction x
         in (n, Repr f $ "snd" `apply` paren ("properFraction" <+> args [rx]))
 
-instance RealFloat a => RealFloat (Repr a) where
+instance RealFloat α => RealFloat (Repr α) where
     floatRadix     = to    floatRadix
     floatDigits    = to    floatDigits
     floatRange     = to    floatRange
@@ -278,7 +282,7 @@ instance RealFloat a => RealFloat (Repr a) where
     isIEEE         = to    isIEEE
     atan2          = app2  atan2 "atan2"
 
-instance Enum a => Enum (Repr a) where
+instance Enum α => Enum (Repr α) where
     succ     = app   succ   "succ"
     pred     = app   pred   "pred"
     toEnum   = from  toEnum "toEnum"
@@ -292,10 +296,10 @@ instance Enum a => Enum (Repr a) where
                    (Repr y ry)
                    (Repr z rz) = enum "FromThenTo" (enumFromThenTo x y z) [rx, ry, rz]
 
-enum :: DString -> [a] -> [Renderer] -> [Repr a]
+enum ∷ DString → [α] → [Renderer] → [Repr α]
 enum enumStr xs rxs = list xs (("enum" <> enumStr) `applies` rxs)
 
-instance Ord a => Ord (Repr a) where
+instance Ord α => Ord (Repr α) where
     compare = to2  compare
     (<)     = to2  (<)
     (>=)    = to2  (>=)
@@ -304,22 +308,22 @@ instance Ord a => Ord (Repr a) where
     max     = app2 max "max"
     min     = app2 min "min"
 
-instance Eq a => Eq (Repr a) where
+instance Eq α => Eq (Repr α) where
     (==) = to2 (==)
     (/=) = to2 (/=)
 
-instance Bounded a => Bounded (Repr a) where
+instance Bounded α => Bounded (Repr α) where
     minBound = constant minBound "minBound"
     maxBound = constant maxBound "maxBound"
 
-instance Monoid a => Monoid (Repr a) where
+instance Monoid α => Monoid (Repr α) where
     mempty  = constant mempty  "mempty"
     mappend = app2     mappend "mappend"
     mconcat reprs =
         let (xs, rs) = unzipReprs reprs
         in Repr (mconcat xs) ("mconcat" `apply` brackets (commas rs))
 
-instance Bits a => Bits (Repr a) where
+instance Bits α => Bits (Repr α) where
     (.&.)         = infx L 7 (.&.)         ".&."
     (.|.)         = infx L 5 (.|.)         ".|."
     xor           = app2     xor           "xor"
@@ -338,10 +342,15 @@ instance Bits a => Bits (Repr a) where
     rotateL       = app2Show rotateL       "rotateL"
     rotateR       = app2Show rotateR       "rotateR"
 
-instance HasResolution a => HasResolution (Repr a) where
+#if MIN_VERSION_base(4,2,0)
+instance HasResolution α => HasResolution (Repr α) where
+    resolution (_ ∷ p (Repr α)) = resolution (undefined ∷ p α)
+#else
+instance HasResolution α => HasResolution (Repr α) where
     resolution = to resolution
+#endif
 
-instance Ix a => Ix (Repr a) where
+instance Ix α => Ix (Repr α) where
     range (Repr b rb, Repr e re) =
         list (range (b, e)) ("range" `apply` paren (commas [rb, re]))
 
@@ -349,134 +358,134 @@ instance Ix a => Ix (Repr a) where
     inRange   (b, e) p = inRange   (extract b, extract e) (extract p)
     rangeSize (b, e)   = rangeSize (extract b, extract e)
 
-instance (Show a, Storable a) => Storable (Repr a) where
+instance (Show α, Storable α) => Storable (Repr α) where
     sizeOf    = to sizeOf
     alignment = to alignment
 
     peekElemOff rPtr off = do
-      x <- peekElemOff (castPtr rPtr) off
+      x ← peekElemOff (castPtr rPtr) off
       return $ pure x <?> ("peekElemOff" <+> showFuncArg rPtr <+> showFuncArg off)
 
     peekByteOff ptr off = do
-      x <- peekByteOff ptr off
+      x ← peekByteOff ptr off
       return $ pure x <?> ("peekByteOff" <+> showFuncArg ptr <+> showFuncArg off)
 
     peek rPtr = do
-      x <- peek (castPtr rPtr)
+      x ← peek (castPtr rPtr)
       return $ pure x <?> ("peek" <+> showFuncArg rPtr)
 
     poke        rPtr     r = poke        (castPtr rPtr)     (extract r)
     pokeElemOff rPtr off r = pokeElemOff (castPtr rPtr) off (extract r)
     pokeByteOff  ptr off r = pokeByteOff ptr            off (extract r)
 
-instance Typeable a => Typeable (Repr a) where
+instance Typeable α => Typeable (Repr α) where
     typeOf = to typeOf
 
 #if MIN_VERSION_base(4,0,0)
-instance Exception a => Exception (Repr a) where
+instance Exception α => Exception (Repr α) where
     toException = to toException
     fromException se =
-        fmap (\x -> pure x <?> ( "fromJust"
-                               <+> paren ( "fromException"
-                                         <+> paren ( "toException"
-                                                   <+> paren (showFuncArg x)
-                                                   )
-                                         )
-                               )
+        fmap (\x → pure x <?> ( "fromJust"
+                              <+> paren ( "fromException"
+                                        <+> paren ( "toException"
+                                                  <+> paren (showFuncArg x)
+                                                  )
+                                        )
+                              )
              ) $ fromException se
 #endif
 
-instance (Random a, Show a) => Random (Repr a) where
-    randomR (b, e) = first pure . randomR (extract b, extract e)
-    random         = first pure . random
+instance (Random α, Show α) => Random (Repr α) where
+    randomR (b, e) = first pure ∘ randomR (extract b, extract e)
+    random         = first pure ∘ random
 
 
 --------------------------------------------------------------------------------
 -- Utility functions
 --------------------------------------------------------------------------------
 
-topLevel :: Renderer -> DString
+topLevel ∷ Renderer → DString
 topLevel r = r 0 Non
 
-constant :: a -> DString -> Repr a
-constant x xStr = Repr x $ \_ _ -> xStr
+constant ∷ α → DString → Repr α
+constant x xStr = repr x $ \_ _ → xStr
 
-showFuncArg :: Show a => a -> DString
-showFuncArg = fromShowS . showsPrec funAppPrec
+showFuncArg ∷ Show α => α → DString
+showFuncArg = fromShowS ∘ showsPrec funAppPrec
 
-from :: Show a => (a -> b) -> DString -> (a -> Repr b)
+from ∷ Show α => (α → β) → DString → (α → Repr β)
 from f fStr =
-    \x -> Repr (f x) $ fStr `apply` showFuncArg x
+    \x → repr (f x) $ fStr `apply` showFuncArg x
 
-from2 :: (Show a, Show b) => (a -> b -> c) -> DString -> (a -> b -> Repr c)
+from2 ∷ (Show α, Show β) => (α → β → γ) → DString → (α → β → Repr γ)
 from2 f fStr =
-    \x y -> Repr (f x y) $ fStr `apply`(showFuncArg x <+> showFuncArg y)
+    \x y → repr (f x y) $ fStr `apply`(showFuncArg x <+> showFuncArg y)
 
-to :: (a -> b) -> (Repr a -> b)
-to f = f . extract
+to ∷ (α → β) → (Repr α → β)
+to f = f ∘ extract
 
-to2 :: (a -> b -> c) -> (Repr a -> Repr b -> c)
-to2 f = \x y -> f (extract x) (extract y)
+to2 ∷ (α → β → γ) → (Repr α → Repr β → γ)
+to2 f = \x y → f (extract x) (extract y)
 
-app :: (a -> b) -> DString -> (Repr a -> Repr b)
+app ∷ (α → β) → DString → (Repr α → Repr β)
 app f fStr =
-    \(Repr x rx) -> Repr (f x) $ fStr `applies` [rx]
+    \(Repr x rx) → repr (f x) $ fStr `applies` [rx]
 
-app2 :: (a -> b -> c) -> DString -> (Repr a -> Repr b -> Repr c)
+app2 ∷ (α → β → γ) → DString → (Repr α → Repr β → Repr γ)
 app2 f fStr =
-    \(Repr x rx) (Repr y ry) -> Repr (f x y) $ fStr `applies` [rx, ry]
+    \(Repr x rx) (Repr y ry) → repr (f x y) $ fStr `applies` [rx, ry]
 
-app2Show :: Show b => (a -> b -> a) -> DString -> (Repr a -> b -> Repr a)
+app2Show ∷ Show β => (α → β → α) → DString → (Repr α → β → Repr α)
 app2Show f fStr =
-    \(Repr x rx) y ->
-        Repr (f x y)
-             (fStr `applies` [rx, \prec _ -> fromShowS $ showsPrec prec y])
+    \(Repr x rx) y →
+        repr (f x y)
+             (fStr `applies` [rx, \prec _ → fromShowS $ showsPrec prec y])
 
-infx :: Fixity -> Precedence -> (a -> b -> c) -> DString
-     -> (Repr a -> Repr b -> Repr c)
+infx ∷ Fixity → Precedence → (α → β → γ) → DString
+     → (Repr α → Repr β → Repr γ)
 infx opFix opPrec op opStr =
-    \(Repr x rx) (Repr y ry) ->
-        Repr (x `op` y) $ bin opFix opPrec opStr rx ry
+    \(Repr x rx) (Repr y ry) →
+        repr (x `op` y) $ bin opFix opPrec opStr rx ry
 
-bin :: Fixity -> Precedence -> DString -> Renderer -> Renderer -> Renderer
+bin ∷ Fixity → Precedence → DString → Renderer → Renderer → Renderer
 bin opFix opPrec opStr l r =
-    \prec fixity -> (prec > opPrec ||
-                     (prec == opPrec &&
-                      fixity /= Non &&
-                      fixity /= opFix))
-                    `thenParen`
-                    (l opPrec L <+> opStr <+> r opPrec R)
+    \prec fixity → (prec > opPrec ∨
+                     (prec == opPrec ∧
+                       fixity /= Non ∧
+                       fixity /= opFix))
+                   `thenParen`
+                   (l opPrec L <+> opStr <+> r opPrec R)
 
-apply :: DString -> DString -> Renderer
-fStr `apply` argsStr = \prec _ -> (prec >= funAppPrec)
-                                  `thenParen`
-                                  (fStr <+> argsStr)
+apply ∷ DString → DString → Renderer
+fStr `apply` argsStr = \prec _ → (prec >= funAppPrec)
+                                 `thenParen`
+                                 (fStr <+> argsStr)
 
-applies :: DString -> [Renderer] -> Renderer
+applies ∷ DString → [Renderer] → Renderer
 applies fStr rs = fStr `apply` args rs
 
-args :: [Renderer] -> DString
-args = hsep . map (\rx -> rx funAppPrec Non)
+args ∷ [Renderer] → DString
+args = hsep ∘ map (\rx → rx funAppPrec Non)
 
-list :: [a] -> Renderer -> [Repr a]
+list ∷ [α] → Renderer → [Repr α]
 list xs rXs = zipWith combine [0..] xs
     where
-      combine ix x = Repr x $ bin L 9 "!!" rXs (\_ _ -> integer ix)
+      combine ix x = repr x $ bin L 9 "!!" rXs (\_ _ → integer ix)
 
-commas :: [Renderer] -> DString
-commas = hsep . punctuate "," . map topLevel
+commas ∷ [Renderer] → DString
+commas = hsep ∘ punctuate "," ∘ map topLevel
 
-unzipReprs :: [Repr a] -> ([a], [Renderer])
-unzipReprs = foldr (\(Repr x r) ~(xs, rs) -> (x:xs, r:rs)) ([], [])
+unzipReprs ∷ [Repr α] → ([α], [Renderer])
+unzipReprs = foldr (\(Repr x r) ~(xs, rs) → (x:xs, r:rs)) ([], [])
 
-tup :: (a -> b -> (c, d)) -> DString
-    -> (Repr a -> Repr b -> (Repr c, Repr d))
+tup ∷ (α → β → (γ, δ)) → DString
+    → (Repr α → Repr β → (Repr γ, Repr δ))
 tup f fStr =
-    \(Repr x rx) (Repr y ry) -> let (q, r) = f x y
-                                    s = paren (fStr <+> args [rx, ry])
-                                in ( Repr q $ "fst" `apply` s
-                                   , Repr r $ "snd" `apply` s
-                                   )
+    \(Repr x rx) (Repr y ry) → let (q, r) = f x y
+                                   s = paren (fStr <+> args [rx, ry])
+                               in ( repr q $ "fst" `apply` s
+                                  , repr r $ "snd" `apply` s
+                                  )
 
 
 -- The End ---------------------------------------------------------------------

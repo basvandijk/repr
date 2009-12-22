@@ -171,7 +171,7 @@ The rendering will then look like:
 @
 -}
 (<?>) :: Repr a -> DString -> Repr a
-(Repr x rx) <?> s = constant x $ topLevel rx `annotateWith` s
+(Repr x rx) <?> s = constant x $ paren $ between "{- " " -}" s <+> topLevel rx
 
 {-| @pure x@ constructs a 'Repr' which has @x@ as value and the showed @x@
 as rendering. For example:
@@ -394,9 +394,6 @@ instance (Random a, Show a) => Random (Repr a) where
 --------------------------------------------------------------------------------
 -- Utility functions
 --------------------------------------------------------------------------------
-
-annotateWith :: DString -> DString -> DString
-s `annotateWith` a = paren $ between "{- " " -}" a <+> s
 
 topLevel :: Renderer -> DString
 topLevel r = r 0 Non

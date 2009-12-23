@@ -17,7 +17,7 @@ description:   This library allows you to render overloaded expressions to their
                @
                *Repr> let rd = 1.5 + 2 + (3 + (-4) * (5 - pi / sqrt 6)) :: Repr Double
                *Repr> show rd
-               \"fromRational (3 % 2) + fromInteger 2 + (fromInteger 3 + negate (fromInteger 4) * (fromInteger 5 - pi / sqrt (fromInteger 6)))\"
+               \"fromRational (3 % 2) + 2 + (3 + negate 4 * (5 - pi / sqrt 6))\"
                @
 
 source-repository head

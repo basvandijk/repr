@@ -1,8 +1,9 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE UnicodeSyntax #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP
+           , UnicodeSyntax
+           , NoImplicitPrelude
+           , OverloadedStrings
+           , ScopedTypeVariables
+  #-}
 
 module Text.Repr
     ( Repr
@@ -22,9 +23,7 @@ module Text.Repr
 --------------------------------------------------------------------------------
 
 -- from base:
-import Prelude                 ( Eq(..)
-                               , Ord(..)
-                               , Enum(..)
+import Prelude                 ( Enum(..)
                                , Bounded(..)
                                , Num(..)
                                , Real(..)
@@ -35,19 +34,22 @@ import Prelude                 ( Eq(..)
                                , RealFloat(..)
                                , undefined
                                )
+import Data.Eq                 ( Eq(..) )
+import Data.Ord                ( Ord(..) )
 import Data.String             ( IsString(..) )
 import Data.Monoid             ( Monoid(..) )
 import Data.Bits               ( Bits(..) )
 import Data.Function           ( ($) )
+import Data.Functor            ( fmap )
 import Data.Fixed              ( HasResolution(..) )
 import Data.List               ( foldr, map, zipWith, take, length )
 import Data.Int                ( Int )
 import Data.Ix                 ( Ix(..) )
 import Foreign.Storable        ( Storable(..) )
 import Foreign.Ptr             ( castPtr )
-import Data.Typeable           ( Typeable, typeOf)
+import Data.Typeable           ( Typeable(..))
 import Control.Applicative     ( liftA2 )
-import Control.Monad           ( return, (>>=), fail, fmap )
+import Control.Monad           ( return, (>>=), fail )
 import Control.Arrow           ( first )
 import Text.Show               ( Show(..) )
 import Text.Read               ( Read(..) )
@@ -69,7 +71,7 @@ import Data.String.ToString    ( ToString(..) )
 -- from string-combinators:
 import Data.String.Combinators ( (<>), (<+>)
                                , between, paren, thenParen, brackets
-                               , punctuate, fromShow, integer, int, hsep
+                               , punctuate, fromShow, integer, int, unwords
                                )
 -- from dstring:
 import Data.DString            ( DString, fromShowS, toShowS )
@@ -465,7 +467,7 @@ applies ∷ DString → [Renderer] → Renderer
 applies fStr rs = fStr `apply` args rs
 
 args ∷ [Renderer] → DString
-args = hsep ∘ map (\rx → rx funAppPrec Non)
+args = unwords ∘ map (\rx → rx funAppPrec Non)
 
 list ∷ [α] → Renderer → [Repr α]
 list xs rXs = zipWith combine [0..] xs
@@ -473,7 +475,7 @@ list xs rXs = zipWith combine [0..] xs
       combine ix x = repr x $ bin L 9 "!!" rXs (\_ _ → integer ix)
 
 commas ∷ [Renderer] → DString
-commas = hsep ∘ punctuate "," ∘ map topLevel
+commas = unwords ∘ punctuate "," ∘ map topLevel
 
 unzipReprs ∷ [Repr α] → ([α], [Renderer])
 unzipReprs = foldr (\(Repr x r) ~(xs, rs) → (x:xs, r:rs)) ([], [])

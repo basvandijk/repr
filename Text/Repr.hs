@@ -190,7 +190,7 @@ as rendering. For example:
 \"[1,2,3]\"
 @
 -}
-pure ∷ Show α => α → Repr α
+pure ∷ Show α ⇒ α → Repr α
 pure x = Repr x $ \prec _ → fromShowS $ showsPrec prec x
 
 
@@ -201,7 +201,7 @@ pure x = Repr x $ \prec _ → fromShowS $ showsPrec prec x
 instance Show (Repr α) where
     showsPrec prec r = toShowS $ renderer r prec Non
 
-instance Read α => Read (Repr α) where
+instance Read α ⇒ Read (Repr α) where
     readsPrec prec str =
         map (\(x, rst) → ( constant x $
                               fromString $
@@ -211,13 +211,13 @@ instance Read α => Read (Repr α) where
                           )
             ) $ readsPrec prec str
 
-instance IsString α => IsString (Repr α) where
+instance IsString α ⇒ IsString (Repr α) where
     fromString = liftA2 constant fromString fromShow
 
-instance ToString α => ToString (Repr α) where
+instance ToString α ⇒ ToString (Repr α) where
     toString = to toString
 
-instance Num α => Num (Repr α) where
+instance Num α ⇒ Num (Repr α) where
     fromInteger n = repr (fromInteger n) $ \p _ → fromShowS $ showsPrec p n
     (+)           = infx L 6 (+)         "+"
     (-)           = infx L 6 (-)         "-"
@@ -226,10 +226,10 @@ instance Num α => Num (Repr α) where
     abs           = app      abs         "abs"
     signum        = app      signum      "signum"
 
-instance Real α => Real (Repr α) where
+instance Real α ⇒ Real (Repr α) where
     toRational = to toRational
 
-instance Integral α => Integral (Repr α) where
+instance Integral α ⇒ Integral (Repr α) where
     quot      = app2 quot    "quot"
     rem       = app2 rem     "rem"
     div       = app2 div     "div"
@@ -238,12 +238,12 @@ instance Integral α => Integral (Repr α) where
     divMod    = tup  divMod  "divMod"
     toInteger = to   toInteger
 
-instance Fractional α => Fractional (Repr α) where
+instance Fractional α ⇒ Fractional (Repr α) where
     (/)          = infx L 7 (*)          "/"
     recip        = app      recip        "recip"
     fromRational = from     fromRational "fromRational"
 
-instance Floating α => Floating (Repr α) where
+instance Floating α ⇒ Floating (Repr α) where
     pi      = constant pi      "pi"
     (**)    = infx R 8 (**)    "**"
     logBase = app2     logBase "logBase"
@@ -263,12 +263,12 @@ instance Floating α => Floating (Repr α) where
     atanh   = app      atanh   "atanh"
     acosh   = app      acosh   "acosh"
 
-instance RealFrac α => RealFrac (Repr α) where
+instance RealFrac α ⇒ RealFrac (Repr α) where
     properFraction (Repr x rx) =
         let (n, f) = properFraction x
         in (n, Repr f $ "snd" `apply` paren ("properFraction" <+> args [rx]))
 
-instance RealFloat α => RealFloat (Repr α) where
+instance RealFloat α ⇒ RealFloat (Repr α) where
     floatRadix     = to    floatRadix
     floatDigits    = to    floatDigits
     floatRange     = to    floatRange
@@ -284,7 +284,7 @@ instance RealFloat α => RealFloat (Repr α) where
     isIEEE         = to    isIEEE
     atan2          = app2  atan2 "atan2"
 
-instance Enum α => Enum (Repr α) where
+instance Enum α ⇒ Enum (Repr α) where
     succ     = app   succ   "succ"
     pred     = app   pred   "pred"
     toEnum   = from  toEnum "toEnum"
@@ -301,7 +301,7 @@ instance Enum α => Enum (Repr α) where
 enum ∷ DString → [α] → [Renderer] → [Repr α]
 enum enumStr xs rxs = list xs (("enum" <> enumStr) `applies` rxs)
 
-instance Ord α => Ord (Repr α) where
+instance Ord α ⇒ Ord (Repr α) where
     compare = to2  compare
     (<)     = to2  (<)
     (>=)    = to2  (>=)
@@ -310,22 +310,22 @@ instance Ord α => Ord (Repr α) where
     max     = app2 max "max"
     min     = app2 min "min"
 
-instance Eq α => Eq (Repr α) where
+instance Eq α ⇒ Eq (Repr α) where
     (==) = to2 (==)
     (/=) = to2 (/=)
 
-instance Bounded α => Bounded (Repr α) where
+instance Bounded α ⇒ Bounded (Repr α) where
     minBound = constant minBound "minBound"
     maxBound = constant maxBound "maxBound"
 
-instance Monoid α => Monoid (Repr α) where
+instance Monoid α ⇒ Monoid (Repr α) where
     mempty  = constant mempty  "mempty"
     mappend = app2     mappend "mappend"
     mconcat reprs =
         let (xs, rs) = unzipReprs reprs
         in Repr (mconcat xs) ("mconcat" `apply` brackets (commas rs))
 
-instance Bits α => Bits (Repr α) where
+instance Bits α ⇒ Bits (Repr α) where
     (.&.)         = infx L 7 (.&.)         ".&."
     (.|.)         = infx L 5 (.|.)         ".|."
     xor           = app2     xor           "xor"
@@ -345,14 +345,14 @@ instance Bits α => Bits (Repr α) where
     rotateR       = app2Show rotateR       "rotateR"
 
 #if MIN_VERSION_base(4,2,0)
-instance HasResolution α => HasResolution (Repr α) where
+instance HasResolution α ⇒ HasResolution (Repr α) where
     resolution (_ ∷ p (Repr α)) = resolution (undefined ∷ p α)
 #else
-instance HasResolution α => HasResolution (Repr α) where
+instance HasResolution α ⇒ HasResolution (Repr α) where
     resolution = to resolution
 #endif
 
-instance Ix α => Ix (Repr α) where
+instance Ix α ⇒ Ix (Repr α) where
     range (Repr b rb, Repr e re) =
         list (range (b, e)) ("range" `apply` paren (commas [rb, re]))
 
@@ -360,7 +360,7 @@ instance Ix α => Ix (Repr α) where
     inRange   (b, e) p = inRange   (extract b, extract e) (extract p)
     rangeSize (b, e)   = rangeSize (extract b, extract e)
 
-instance (Show α, Storable α) => Storable (Repr α) where
+instance (Show α, Storable α) ⇒ Storable (Repr α) where
     sizeOf    = to sizeOf
     alignment = to alignment
 
@@ -380,11 +380,11 @@ instance (Show α, Storable α) => Storable (Repr α) where
     pokeElemOff rPtr off r = pokeElemOff (castPtr rPtr) off (extract r)
     pokeByteOff  ptr off r = pokeByteOff ptr            off (extract r)
 
-instance Typeable α => Typeable (Repr α) where
+instance Typeable α ⇒ Typeable (Repr α) where
     typeOf = to typeOf
 
 #if MIN_VERSION_base(4,0,0)
-instance Exception α => Exception (Repr α) where
+instance Exception α ⇒ Exception (Repr α) where
     toException = to toException
     fromException se =
         fmap (\x → pure x <?> ( "fromJust"
@@ -397,7 +397,7 @@ instance Exception α => Exception (Repr α) where
              ) $ fromException se
 #endif
 
-instance (Random α, Show α) => Random (Repr α) where
+instance (Random α, Show α) ⇒ Random (Repr α) where
     randomR (b, e) = first pure ∘ randomR (extract b, extract e)
     random         = first pure ∘ random
 
@@ -412,14 +412,14 @@ topLevel r = r 0 Non
 constant ∷ α → DString → Repr α
 constant x xStr = repr x $ \_ _ → xStr
 
-showFuncArg ∷ Show α => α → DString
+showFuncArg ∷ Show α ⇒ α → DString
 showFuncArg = fromShowS ∘ showsPrec funAppPrec
 
-from ∷ Show α => (α → β) → DString → (α → Repr β)
+from ∷ Show α ⇒ (α → β) → DString → (α → Repr β)
 from f fStr =
     \x → repr (f x) $ fStr `apply` showFuncArg x
 
-from2 ∷ (Show α, Show β) => (α → β → γ) → DString → (α → β → Repr γ)
+from2 ∷ (Show α, Show β) ⇒ (α → β → γ) → DString → (α → β → Repr γ)
 from2 f fStr =
     \x y → repr (f x y) $ fStr `apply`(showFuncArg x <+> showFuncArg y)
 
@@ -437,7 +437,7 @@ app2 ∷ (α → β → γ) → DString → (Repr α → Repr β → Repr γ)
 app2 f fStr =
     \(Repr x rx) (Repr y ry) → repr (f x y) $ fStr `applies` [rx, ry]
 
-app2Show ∷ Show β => (α → β → α) → DString → (Repr α → β → Repr α)
+app2Show ∷ Show β ⇒ (α → β → α) → DString → (Repr α → β → Repr α)
 app2Show f fStr =
     \(Repr x rx) y →
         repr (f x y)

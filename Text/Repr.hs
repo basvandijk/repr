@@ -267,6 +267,10 @@ instance RealFrac α ⇒ RealFrac (Repr α) where
     properFraction (Repr x rx) =
         let (n, f) = properFraction x
         in (n, Repr f $ "snd" `apply` paren ("properFraction" <+> args [rx]))
+    truncate = to truncate
+    round    = to round
+    ceiling  = to ceiling
+    floor    = to floor
 
 instance RealFloat α ⇒ RealFloat (Repr α) where
     floatRadix     = to    floatRadix
@@ -336,7 +340,7 @@ instance Bits α ⇒ Bits (Repr α) where
     setBit        = app2Show setBit        "setBit"
     clearBit      = app2Show clearBit      "clearBit"
     complementBit = app2Show complementBit "complementBit"
-    testBit x i   = testBit (extract x) i
+    testBit       = to       testBit
     bitSize       = to       bitSize
     isSigned      = to       isSigned
     shiftL        = app2Show shiftL        "shiftL"

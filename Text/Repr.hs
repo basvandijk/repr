@@ -3,6 +3,7 @@
            , NoImplicitPrelude
            , OverloadedStrings
            , ScopedTypeVariables
+           , DeriveDataTypeable
   #-}
 
 module Text.Repr
@@ -47,7 +48,7 @@ import Data.Int                ( Int )
 import Data.Ix                 ( Ix(..) )
 import Foreign.Storable        ( Storable(..) )
 import Foreign.Ptr             ( castPtr )
-import Data.Typeable           ( Typeable(..))
+import Data.Typeable           ( Typeable )
 import Control.Applicative     ( liftA2 )
 import Control.Monad           ( return, (>>=), fail )
 import Control.Arrow           ( first )
@@ -112,6 +113,7 @@ And you can render @r@ to its textual representation using 'show':
 data Repr α = Repr { extract  ∷ α        -- ^ Extract the value of the @Repr@.
                    , renderer ∷ Renderer -- ^ Extract the renderer of the @Repr@.
                    }
+            deriving Typeable
 
 -- | Construct a @Repr@ from the given value and its renderer.
 repr ∷ α → Renderer → Repr α
@@ -383,9 +385,6 @@ instance (Show α, Storable α) ⇒ Storable (Repr α) where
     poke        rPtr     r = poke        (castPtr rPtr)     (extract r)
     pokeElemOff rPtr off r = pokeElemOff (castPtr rPtr) off (extract r)
     pokeByteOff  ptr off r = pokeByteOff ptr            off (extract r)
-
-instance Typeable α ⇒ Typeable (Repr α) where
-    typeOf = to typeOf
 
 #if MIN_VERSION_base(4,0,0)
 instance Exception α ⇒ Exception (Repr α) where

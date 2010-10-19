@@ -66,9 +66,6 @@ import Data.Bool.Unicode       ( (∧), (∨) )
 -- from random:
 import System.Random           ( Random(..) )
 
--- from to-string-class:
-import Data.String.ToString    ( ToString(..) )
-
 -- from string-combinators:
 import Data.String.Combinators ( (<>), (<+>)
                                , between, parens, thenParens, brackets
@@ -215,9 +212,6 @@ instance Read α ⇒ Read (Repr α) where
 
 instance IsString α ⇒ IsString (Repr α) where
     fromString = liftA2 constant fromString fromShow
-
-instance ToString α ⇒ ToString (Repr α) where
-    toString = to toString
 
 instance Num α ⇒ Num (Repr α) where
     fromInteger n = repr (fromInteger n) $ \p _ → fromShowS $ showsPrec p n

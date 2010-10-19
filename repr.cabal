@@ -28,7 +28,7 @@ library
   build-depends: base                 >= 3       && < 4.3
                , base-unicode-symbols >= 0.1.1   && < 0.3
                , random               >= 1.0     && < 1.1
-               , string-combinators   >= 0.5     && < 0.6
+               , string-combinators   >= 0.6     && < 0.7
                , to-string-class      >= 0.1.2   && < 0.2
                , dstring              >= 0.3.0.1 && < 0.4
   exposed-modules: Text.Repr

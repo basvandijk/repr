@@ -71,7 +71,7 @@ import Data.String.ToString    ( ToString(..) )
 
 -- from string-combinators:
 import Data.String.Combinators ( (<>), (<+>)
-                               , between, paren, thenParen, brackets
+                               , between, parens, thenParens, brackets
                                , punctuate, fromShow, integer, int, unwords
                                )
 -- from dstring:
@@ -179,7 +179,7 @@ The rendering will then look like:
 @
 -}
 (<?>) ∷ Repr α → DString → Repr α
-(Repr x rx) <?> s = constant x $ paren $ between "{- " " -}" s <+> topLevel rx
+(Repr x rx) <?> s = constant x $ parens $ between "{- " " -}" s <+> topLevel rx
 
 {-| @pure x@ constructs a 'Repr' which has @x@ as value and the showed @x@
 as rendering. For example:
@@ -268,7 +268,7 @@ instance Floating α ⇒ Floating (Repr α) where
 instance RealFrac α ⇒ RealFrac (Repr α) where
     properFraction (Repr x rx) =
         let (n, f) = properFraction x
-        in (n, Repr f $ "snd" `apply` paren ("properFraction" <+> args [rx]))
+        in (n, Repr f $ "snd" `apply` parens ("properFraction" <+> args [rx]))
     truncate = to truncate
     round    = to round
     ceiling  = to ceiling
@@ -360,7 +360,7 @@ instance HasResolution α ⇒ HasResolution (Repr α) where
 
 instance Ix α ⇒ Ix (Repr α) where
     range (Repr b rb, Repr e re) =
-        list (range (b, e)) ("range" `apply` paren (commas [rb, re]))
+        list (range (b, e)) ("range" `apply` parens (commas [rb, re]))
 
     index     (b, e) p = index     (extract b, extract e) (extract p)
     inRange   (b, e) p = inRange   (extract b, extract e) (extract p)
@@ -391,9 +391,9 @@ instance Exception α ⇒ Exception (Repr α) where
     toException = to toException
     fromException se =
         fmap (\x → pure x <?> ( "fromJust"
-                              <+> paren ( "fromException"
-                                        <+> paren ( "toException"
-                                                  <+> paren (showFuncArg x)
+                              <+> parens ( "fromException"
+                                        <+> parens ( "toException"
+                                                  <+> parens (showFuncArg x)
                                                   )
                                         )
                               )
@@ -458,12 +458,12 @@ bin opFix opPrec opStr l r =
                      (prec == opPrec ∧
                        fixity /= Non ∧
                        fixity /= opFix))
-                   `thenParen`
+                   `thenParens`
                    (l opPrec L <+> opStr <+> r opPrec R)
 
 apply ∷ DString → DString → Renderer
 fStr `apply` argsStr = \prec _ → (prec >= funAppPrec)
-                                 `thenParen`
+                                 `thenParens`
                                  (fStr <+> argsStr)
 
 applies ∷ DString → [Renderer] → Renderer
@@ -487,7 +487,7 @@ tup ∷ (α → β → (γ, δ)) → DString
     → (Repr α → Repr β → (Repr γ, Repr δ))
 tup f fStr =
     \(Repr x rx) (Repr y ry) → let (q, r) = f x y
-                                   s = paren (fStr <+> args [rx, ry])
+                                   s = parens (fStr <+> args [rx, ry])
                                in ( repr q $ "fst" `apply` s
                                   , repr r $ "snd" `apply` s
                                   )

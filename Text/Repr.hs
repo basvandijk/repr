@@ -50,13 +50,17 @@ import Foreign.Storable        ( Storable(..) )
 import Foreign.Ptr             ( castPtr )
 import Data.Typeable           ( Typeable )
 import Control.Applicative     ( liftA2 )
-import Control.Monad           ( return, (>>=), fail )
+import Control.Monad           ( return )
 import Control.Arrow           ( first )
 import Text.Show               ( Show(..) )
 import Text.Read               ( Read(..) )
 
 #if MIN_VERSION_base(4,0,0)
 import Control.Exception       ( Exception(..) )
+#endif
+
+#if __GLASGOW_HASKELL__ < 701
+import Control.Monad           ( (>>=), fail )
 #endif
 
 -- from base-unicode-symbols:

@@ -59,7 +59,7 @@ import Text.Read               ( Read(..) )
 import Control.Exception       ( Exception(..) )
 #endif
 
-#if __GLASGOW_HASKELL__ < 701
+#if __GLASGOW_HASKELL__ < 700
 import Control.Monad           ( (>>=), fail )
 #endif
 

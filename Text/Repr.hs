@@ -241,7 +241,7 @@ instance Integral α ⇒ Integral (Repr α) where
 instance Fractional α ⇒ Fractional (Repr α) where
     (/)          = infx L 7 (*)          "/"
     recip        = app      recip        "recip"
-    fromRational = from     fromRational "fromRational"
+    fromRational = pure ∘ fromRational
 
 instance Floating α ⇒ Floating (Repr α) where
     pi      = constant pi      "pi"

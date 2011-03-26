@@ -3,7 +3,6 @@ version:       0.4.1
 cabal-version: >= 1.6
 build-type:    Simple
 stability:     experimental
-tested-with:   GHC ==6.10.4
 author:        Bas van Dijk
 maintainer:    v.dijk.bas@gmail.com
 copyright:     (c) 2009-2011 Bas van Dijk

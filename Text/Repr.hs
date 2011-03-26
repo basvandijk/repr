@@ -6,6 +6,17 @@
            , DeriveDataTypeable
   #-}
 
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Text.Repr
+-- Copyright   :  (c) 2009–2011 Bas van Dijk
+-- License     :  BSD-style (see the file LICENSE)
+-- Maintainer  :  Bas van Dijk <v.dijk.bas@gmail.com>
+--
+-- Textual representation of values.
+--
+--------------------------------------------------------------------------------
+
 module Text.Repr
     ( Repr
     , repr
@@ -104,7 +115,7 @@ expression of type @Repr &#945;@. For example:
 *Repr> let r = 1.5 + 2 + (3 + (-4) * (5 - pi / sqrt 6)) :: Repr Double
 @
 
-You can extract the value of @r@:
+You can 'extract' the value of @r@:
 
 @
 *Repr> extract r

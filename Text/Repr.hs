@@ -16,6 +16,13 @@ module Text.Repr
     , Fixity(..)
     , (<?>)
     , pure
+
+      -- * Utilities
+      -- | Handy utilities when writing type class instances for @Reprs@.
+    , constant
+    , to,  to2
+    , app, app2
+    , infx
     ) where
 
 
@@ -180,7 +187,7 @@ The rendering will then look like:
 @
 -}
 (<?>) ∷ Repr α → DString → Repr α
-(Repr x rx) <?> s = constant x $ parens $ between "{- " " -}" s <+> topLevel rx
+(Repr x rx) <?> s = constant x $ parens $ between "{- " " -}" s <+> runRenderer rx
 
 {-| @pure x@ constructs a 'Repr' which has @x@ as value and the showed @x@
 as rendering. For example:
@@ -237,6 +244,15 @@ instance Integral α ⇒ Integral (Repr α) where
     quotRem   = tup  quotRem "quotRem"
     divMod    = tup  divMod  "divMod"
     toInteger = to   toInteger
+
+tup ∷ (α → β → (γ, δ)) → DString
+    → (Repr α → Repr β → (Repr γ, Repr δ))
+tup f fStr = \(Repr x rx) (Repr y ry) →
+             let (q, r) = f x y
+                 s = parens (fStr <+> args [rx, ry])
+             in ( repr q $ "fst" `apply` s
+                , repr r $ "snd" `apply` s
+                )
 
 instance Fractional α ⇒ Fractional (Repr α) where
     (/)          = infx L 7 (*)          "/"
@@ -410,9 +426,18 @@ instance (Random α, Show α) ⇒ Random (Repr α) where
 -- Utility functions
 --------------------------------------------------------------------------------
 
-topLevel ∷ Renderer → DString
-topLevel r = r 0 Non
+mapRepr ∷ (α → β) → (Renderer → Renderer)
+        → (Repr α → Repr β)
+mapRepr f g = \(Repr x rx) → repr (f x) (g rx)
 
+mapRepr2 ∷ (α → β → γ) → (Renderer → Renderer → Renderer)
+         → (Repr α → Repr β → Repr γ)
+mapRepr2 f g = \(Repr x rx) (Repr y ry) → repr (f x y) (g rx ry)
+
+runRenderer ∷ Renderer → DString
+runRenderer r = r 0 Non
+
+-- | For example: @pi = 'constant' 'pi' \"pi\"@
 constant ∷ α → DString → Repr α
 constant x xStr = repr x $ \_ _ → xStr
 
@@ -420,26 +445,26 @@ showFuncArg ∷ Show α ⇒ α → DString
 showFuncArg = fromShowS ∘ showsPrec funAppPrec
 
 from ∷ Show α ⇒ (α → β) → DString → (α → Repr β)
-from f fStr =
-    \x → repr (f x) $ fStr `apply` showFuncArg x
+from f fStr = \x → repr (f x) $ fStr `apply` showFuncArg x
 
 from2 ∷ (Show α, Show β) ⇒ (α → β → γ) → DString → (α → β → Repr γ)
-from2 f fStr =
-    \x y → repr (f x y) $ fStr `apply`(showFuncArg x <+> showFuncArg y)
+from2 f fStr = \x y → repr (f x y) $ fStr `apply`(showFuncArg x <+> showFuncArg y)
 
+-- | For example: @toInteger = 'to' 'toInteger'@
 to ∷ (α → β) → (Repr α → β)
 to f = f ∘ extract
 
+-- | For example: @(<) = 'to2' ('<')@
 to2 ∷ (α → β → γ) → (Repr α → Repr β → γ)
 to2 f = \x y → f (extract x) (extract y)
 
+-- | For example:  @abs = 'app' 'abs' \"abs\"@
 app ∷ (α → β) → DString → (Repr α → Repr β)
-app f fStr =
-    \(Repr x rx) → repr (f x) $ fStr `applies` [rx]
+app f fStr = mapRepr f (\rx → fStr `applies` [rx])
 
+-- | For example: @div = 'app2' 'div' \"div\"@
 app2 ∷ (α → β → γ) → DString → (Repr α → Repr β → Repr γ)
-app2 f fStr =
-    \(Repr x rx) (Repr y ry) → repr (f x y) $ fStr `applies` [rx, ry]
+app2 f fStr = mapRepr2 f (\rx ry → fStr `applies` [rx, ry])
 
 app2Show ∷ Show β ⇒ (α → β → α) → DString → (Repr α → β → Repr α)
 app2Show f fStr =
@@ -447,11 +472,10 @@ app2Show f fStr =
         repr (f x y)
              (fStr `applies` [rx, \prec _ → fromShowS $ showsPrec prec y])
 
+-- | For example: @(+) = 'infx' 'L' 6 ('+') \"+\"@
 infx ∷ Fixity → Precedence → (α → β → γ) → DString
      → (Repr α → Repr β → Repr γ)
-infx opFix opPrec op opStr =
-    \(Repr x rx) (Repr y ry) →
-        repr (x `op` y) $ bin opFix opPrec opStr rx ry
+infx opFix opPrec op opStr = mapRepr2 op (bin opFix opPrec opStr)
 
 bin ∷ Fixity → Precedence → DString → Renderer → Renderer → Renderer
 bin opFix opPrec opStr l r =
@@ -479,16 +503,7 @@ list xs rXs = zipWith combine [0..] xs
       combine ix x = repr x $ bin L 9 "!!" rXs (\_ _ → integer ix)
 
 commas ∷ [Renderer] → DString
-commas = unwords ∘ punctuate "," ∘ map topLevel
-
-tup ∷ (α → β → (γ, δ)) → DString
-    → (Repr α → Repr β → (Repr γ, Repr δ))
-tup f fStr =
-    \(Repr x rx) (Repr y ry) → let (q, r) = f x y
-                                   s = parens (fStr <+> args [rx, ry])
-                               in ( repr q $ "fst" `apply` s
-                                  , repr r $ "snd" `apply` s
-                                  )
+commas = unwords ∘ punctuate "," ∘ map runRenderer
 
 
 -- The End ---------------------------------------------------------------------

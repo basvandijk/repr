@@ -43,7 +43,7 @@ import Data.Bits               ( Bits(..) )
 import Data.Function           ( ($) )
 import Data.Functor            ( fmap )
 import Data.Fixed              ( HasResolution(..) )
-import Data.List               ( foldr, map, zipWith, take, length )
+import Data.List               ( map, zipWith, take, length, unzip )
 import Data.Int                ( Int )
 import Data.Ix                 ( Ix(..) )
 import Foreign.Storable        ( Storable(..) )
@@ -51,7 +51,7 @@ import Foreign.Ptr             ( castPtr )
 import Data.Typeable           ( Typeable )
 import Control.Applicative     ( liftA2 )
 import Control.Monad           ( return )
-import Control.Arrow           ( first )
+import Control.Arrow           ( first, (&&&) )
 import Text.Show               ( Show(..) )
 import Text.Read               ( Read(..) )
 
@@ -329,6 +329,9 @@ instance Monoid α ⇒ Monoid (Repr α) where
         let (xs, rs) = unzipReprs reprs
         in Repr (mconcat xs) ("mconcat" `apply` brackets (commas rs))
 
+unzipReprs ∷ [Repr α] → ([α], [Renderer])
+unzipReprs = unzip ∘ map (extract &&& renderer)
+
 instance Bits α ⇒ Bits (Repr α) where
     (.&.)         = infx L 7 (.&.)         ".&."
     (.|.)         = infx L 5 (.|.)         ".|."
@@ -477,9 +480,6 @@ list xs rXs = zipWith combine [0..] xs
 
 commas ∷ [Renderer] → DString
 commas = unwords ∘ punctuate "," ∘ map topLevel
-
-unzipReprs ∷ [Repr α] → ([α], [Renderer])
-unzipReprs = foldr (\(Repr x r) ~(xs, rs) → (x:xs, r:rs)) ([], [])
 
 tup ∷ (α → β → (γ, δ)) → DString
     → (Repr α → Repr β → (Repr γ, Repr δ))

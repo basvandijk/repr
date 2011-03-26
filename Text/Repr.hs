@@ -218,7 +218,7 @@ instance IsString α ⇒ IsString (Repr α) where
     fromString = liftA2 constant fromString fromShow
 
 instance Num α ⇒ Num (Repr α) where
-    fromInteger n = repr (fromInteger n) $ \p _ → fromShowS $ showsPrec p n
+    fromInteger   = pure ∘ fromInteger
     (+)           = infx L 6 (+)         "+"
     (-)           = infx L 6 (-)         "-"
     (*)           = infx L 7 (*)         "*"

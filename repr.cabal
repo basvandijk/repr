@@ -30,5 +30,5 @@ library
                , random               >= 1.0     && < 1.1
                , string-combinators   >= 0.6     && < 0.7
                , dstring              >= 0.3.0.1 && < 0.5
-  exposed-modules: Text.Repr
+  exposed-modules: Text.Repr, Prelude.Repr
   ghc-options: -Wall

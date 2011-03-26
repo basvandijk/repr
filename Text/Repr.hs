@@ -216,6 +216,23 @@ repr = Repr
 
 
 --------------------------------------------------------------------------------
+-- Handy CPP macro's
+--------------------------------------------------------------------------------
+
+#define PURE(N)      N  = pure  ∘  (N)
+#define TO(N)        N  = to       (N)
+#define TO2(N)      (N) = to2      (N)
+#define FROM(N)      N  = from     (N) "N"
+#define FROM2(N)     N  = from2    (N) "N"
+#define INFX(F,P,N) (N) = infx F P (N) "N"
+#define APP(N)       N  = app      (N) "N"
+#define APP2(N)      N  = app2     (N) "N"
+#define APP2SHOW(N)  N  = app2Show (N) "N"
+#define TUP(N)       N  = tup      (N) "N"
+#define CONSTANT(N)  N  = constant (N) "N"
+
+
+--------------------------------------------------------------------------------
 -- Instances
 --------------------------------------------------------------------------------
 
@@ -236,90 +253,84 @@ instance IsString α ⇒ IsString (Repr α) where
     fromString = liftA2 constant fromString fromShow
 
 instance Num α ⇒ Num (Repr α) where
-    fromInteger   = pure ∘ fromInteger
-    (+)           = infx L 6 (+)         "+"
-    (-)           = infx L 6 (-)         "-"
-    (*)           = infx L 7 (*)         "*"
-    negate        = app      negate      "negate"
-    abs           = app      abs         "abs"
-    signum        = app      signum      "signum"
+    PURE(fromInteger)
+    INFX(L, 6, +)
+    INFX(L, 6, -)
+    INFX(L, 7, *)
+    APP(negate)
+    APP(abs)
+    APP(signum)
 
 instance Real α ⇒ Real (Repr α) where
-    toRational = to toRational
+    TO(toRational)
 
 instance Integral α ⇒ Integral (Repr α) where
-    quot      = app2 quot    "quot"
-    rem       = app2 rem     "rem"
-    div       = app2 div     "div"
-    mod       = app2 mod     "mod"
-    quotRem   = tup  quotRem "quotRem"
-    divMod    = tup  divMod  "divMod"
-    toInteger = to   toInteger
-
-tup ∷ (α → β → (γ, δ)) → DString
-    → (Repr α → Repr β → (Repr γ, Repr δ))
-tup f fStr = \(Repr x rx) (Repr y ry) →
-             let (q, r) = f x y
-                 s = parens (fStr <+> args [rx, ry])
-             in ( repr q $ "fst" `apply` s
-                , repr r $ "snd" `apply` s
-                )
+    APP2(quot)
+    APP2(rem)
+    APP2(div)
+    APP2(mod)
+    TUP(quotRem)
+    TUP(divMod)
+    TO(toInteger)
 
 instance Fractional α ⇒ Fractional (Repr α) where
-    (/)          = infx L 7 (*)          "/"
-    recip        = app      recip        "recip"
-    fromRational = pure ∘ fromRational
+    INFX(L, 7, /)
+    APP(recip)
+    PURE(fromRational)
 
 instance Floating α ⇒ Floating (Repr α) where
-    pi      = constant pi      "pi"
-    (**)    = infx R 8 (**)    "**"
-    logBase = app2     logBase "logBase"
-    exp     = app      exp     "exp"
-    sqrt    = app      sqrt    "sqrt"
-    log     = app      log     "log"
-    sin     = app      sin     "sin"
-    tan     = app      tan     "tan"
-    cos     = app      cos     "cos"
-    asin    = app      asin    "asin"
-    atan    = app      atan    "atan"
-    acos    = app      acos    "acos"
-    sinh    = app      sinh    "sinh"
-    tanh    = app      tanh    "tanh"
-    cosh    = app      cosh    "cosh"
-    asinh   = app      asinh   "asinh"
-    atanh   = app      atanh   "atanh"
-    acosh   = app      acosh   "acosh"
+    CONSTANT(pi)
+    INFX(R, 8, **)
+    APP2(logBase)
+    APP(exp)
+    APP(sqrt)
+    APP(log)
+    APP(sin)
+    APP(tan)
+    APP(cos)
+    APP(asin)
+    APP(atan)
+    APP(acos)
+    APP(sinh)
+    APP(tanh)
+    APP(cosh)
+    APP(asinh)
+    APP(atanh)
+    APP(acosh)
 
 instance RealFrac α ⇒ RealFrac (Repr α) where
+    TO(truncate)
+    TO(round)
+    TO(ceiling)
+    TO(floor)
+
     properFraction (Repr x rx) =
         let (n, f) = properFraction x
         in (n, repr f $ "snd" `apply` parens ("properFraction" <+> args [rx]))
-    truncate = to truncate
-    round    = to round
-    ceiling  = to ceiling
-    floor    = to floor
 
 instance RealFloat α ⇒ RealFloat (Repr α) where
-    floatRadix     = to    floatRadix
-    floatDigits    = to    floatDigits
-    floatRange     = to    floatRange
-    decodeFloat    = to    decodeFloat
-    encodeFloat    = from2 encodeFloat    "encodeFloat"
-    exponent       = to    exponent
-    significand    = app   significand    "significand"
-    scaleFloat i   = app   (scaleFloat i) ("scaleFloat" <+> int i)
-    isNaN          = to    isNaN
-    isInfinite     = to    isInfinite
-    isDenormalized = to    isDenormalized
-    isNegativeZero = to    isNegativeZero
-    isIEEE         = to    isIEEE
-    atan2          = app2  atan2 "atan2"
+    TO(floatRadix)
+    TO(floatDigits)
+    TO(floatRange)
+    TO(decodeFloat)
+    TO(isNaN)
+    TO(isInfinite)
+    TO(isDenormalized)
+    TO(isNegativeZero)
+    TO(isIEEE)
+    TO(exponent)
+    APP(significand)
+    APP2(atan2)
+    FROM2(encodeFloat)
+
+    scaleFloat i = app (scaleFloat i) ("scaleFloat" <+> int i)
 
 instance Enum α ⇒ Enum (Repr α) where
-    succ     = app   succ   "succ"
-    pred     = app   pred   "pred"
-    toEnum   = from  toEnum "toEnum"
-    fromEnum = to    fromEnum
+    APP(succ)
+    APP(pred)
+    FROM(toEnum)
+    TO(fromEnum)
+
     enumFrom       (Repr x rx) = enum "From"       (enumFrom       x)     [rx]
     enumFromThen   (Repr x rx)
                    (Repr y ry) = enum "FromThen"   (enumFromThen   x y)   [rx, ry]
@@ -333,25 +344,26 @@ enum ∷ DString → [α] → [Renderer] → [Repr α]
 enum enumStr xs rxs = list xs (("enum" <> enumStr) `applies` rxs)
 
 instance Ord α ⇒ Ord (Repr α) where
-    compare = to2  compare
-    (<)     = to2  (<)
-    (>=)    = to2  (>=)
-    (>)     = to2  (>)
-    (<=)    = to2  (<=)
-    max     = app2 max "max"
-    min     = app2 min "min"
+    compare = to2 compare
+    TO2(<)
+    TO2(>=)
+    TO2(>)
+    TO2(<=)
+    APP2(max)
+    APP2(min)
 
 instance Eq α ⇒ Eq (Repr α) where
-    (==) = to2 (==)
-    (/=) = to2 (/=)
+    TO2(==)
+    TO2(/=)
 
 instance Bounded α ⇒ Bounded (Repr α) where
-    minBound = constant minBound "minBound"
-    maxBound = constant maxBound "maxBound"
+    CONSTANT(minBound)
+    CONSTANT(maxBound)
 
 instance Monoid α ⇒ Monoid (Repr α) where
-    mempty  = constant mempty  "mempty"
-    mappend = app2     mappend "mappend"
+    CONSTANT(mempty)
+    APP2(mappend)
+
     mconcat reprs =
         let (xs, rs) = unzipReprs reprs
         in Repr (mconcat xs) ("mconcat" `apply` brackets (commas rs))
@@ -360,30 +372,30 @@ unzipReprs ∷ [Repr α] → ([α], [Renderer])
 unzipReprs = unzip ∘ map (extract &&& renderer)
 
 instance Bits α ⇒ Bits (Repr α) where
-    (.&.)         = infx L 7 (.&.)         ".&."
-    (.|.)         = infx L 5 (.|.)         ".|."
-    xor           = app2     xor           "xor"
-    complement    = app      complement    "complement"
-    shift         = app2Show shift         "shift"
-    rotate        = app2Show rotate        "rotate"
-    bit           = from     bit           "bit"
-    setBit        = app2Show setBit        "setBit"
-    clearBit      = app2Show clearBit      "clearBit"
-    complementBit = app2Show complementBit "complementBit"
-    testBit       = to       testBit
-    bitSize       = to       bitSize
-    isSigned      = to       isSigned
-    shiftL        = app2Show shiftL        "shiftL"
-    shiftR        = app2Show shiftR        "shiftR"
-    rotateL       = app2Show rotateL       "rotateL"
-    rotateR       = app2Show rotateR       "rotateR"
+    INFX(L, 7, .&.)
+    INFX(L, 5, .|.)
+    APP2(xor)
+    APP(complement)
+    APP2SHOW(shift)
+    APP2SHOW(rotate)
+    FROM(bit)
+    APP2SHOW(setBit)
+    APP2SHOW(clearBit)
+    APP2SHOW(complementBit)
+    TO(testBit)
+    TO(bitSize)
+    TO(isSigned)
+    APP2SHOW(shiftL)
+    APP2SHOW(shiftR)
+    APP2SHOW(rotateL)
+    APP2SHOW(rotateR)
 
 #if MIN_VERSION_base(4,2,0)
 instance HasResolution α ⇒ HasResolution (Repr α) where
     resolution (_ ∷ p (Repr α)) = resolution (undefined ∷ p α)
 #else
 instance HasResolution α ⇒ HasResolution (Repr α) where
-    resolution = to resolution
+    TO(resolution)
 #endif
 
 instance Ix α ⇒ Ix (Repr α) where
@@ -395,8 +407,8 @@ instance Ix α ⇒ Ix (Repr α) where
     rangeSize (b, e)   = rangeSize (extract b, extract e)
 
 instance (Show α, Storable α) ⇒ Storable (Repr α) where
-    sizeOf    = to sizeOf
-    alignment = to alignment
+    TO(sizeOf)
+    TO(alignment)
 
     peekElemOff rPtr off = do
       x ← peekElemOff (castPtr rPtr) off
@@ -416,7 +428,7 @@ instance (Show α, Storable α) ⇒ Storable (Repr α) where
 
 #if MIN_VERSION_base(4,0,0)
 instance Exception α ⇒ Exception (Repr α) where
-    toException = to toException
+    TO(toException)
     fromException se =
         fmap (\x → pure x <?> ( "fromJust"
                               <+> parens ( "fromException"
@@ -515,6 +527,15 @@ list xs rXs = zipWith combine [0..] xs
 
 commas ∷ [Renderer] → DString
 commas = unwords ∘ punctuate "," ∘ map runRenderer
+
+tup ∷ (α → β → (γ, δ)) → DString
+    → (Repr α → Repr β → (Repr γ, Repr δ))
+tup f fStr = \(Repr x rx) (Repr y ry) →
+             let (q, r) = f x y
+                 s = parens (fStr <+> args [rx, ry])
+             in ( repr q $ "fst" `apply` s
+                , repr r $ "snd" `apply` s
+                )
 
 
 -- The End ---------------------------------------------------------------------

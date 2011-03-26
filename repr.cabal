@@ -6,7 +6,7 @@ stability:     experimental
 tested-with:   GHC ==6.10.4
 author:        Bas van Dijk
 maintainer:    v.dijk.bas@gmail.com
-copyright:     (c) 2009-2010 Bas van Dijk
+copyright:     (c) 2009-2011 Bas van Dijk
 license:       BSD3
 license-file:  LICENSE
 category:      Numeric, Text

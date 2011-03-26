@@ -115,7 +115,7 @@ And you can render @r@ to its textual representation using 'show':
 
 @
 *Repr> show r
-\"fromRational (3 % 2) + 2 + (3 + negate 4 * (5 - pi / sqrt 6))\"
+\"1.5 + 2.0 + (3.0 + negate 4.0 * (5.0 - pi / sqrt 6.0))\"
 @
 -}
 data Repr α = Repr { extract  ∷ α        -- ^ Extract the value of the @Repr@.

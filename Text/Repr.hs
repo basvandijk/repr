@@ -19,7 +19,6 @@
 
 module Text.Repr
     ( Repr
-    , repr
     , extract
     , renderer
     , Renderer
@@ -27,6 +26,7 @@ module Text.Repr
     , Fixity(..)
     , (<?>)
     , pure
+    , repr
 
       -- * Utilities
       -- | Handy utilities when writing type class instances for @Reprs@.
@@ -134,10 +134,6 @@ data Repr α = Repr { extract  ∷ α        -- ^ Extract the value of the @Repr
                    }
             deriving Typeable
 
--- | Construct a @Repr@ from the given value and its renderer.
-repr ∷ α → Renderer → Repr α
-repr = Repr
-
 {-| To render you need to supply the precedence and fixity of the
 enclosing context.
 
@@ -212,7 +208,11 @@ as rendering. For example:
 @
 -}
 pure ∷ Show α ⇒ α → Repr α
-pure x = Repr x $ \prec _ → fromShowS $ showsPrec prec x
+pure x = repr x $ \prec _ → fromShowS $ showsPrec prec x
+
+-- | Construct a @Repr@ from the given value and its renderer.
+repr ∷ α → Renderer → Repr α
+repr = Repr
 
 
 --------------------------------------------------------------------------------
@@ -293,7 +293,7 @@ instance Floating α ⇒ Floating (Repr α) where
 instance RealFrac α ⇒ RealFrac (Repr α) where
     properFraction (Repr x rx) =
         let (n, f) = properFraction x
-        in (n, Repr f $ "snd" `apply` parens ("properFraction" <+> args [rx]))
+        in (n, repr f $ "snd" `apply` parens ("properFraction" <+> args [rx]))
     truncate = to truncate
     round    = to round
     ceiling  = to ceiling

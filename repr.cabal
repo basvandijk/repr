@@ -1,5 +1,5 @@
 name:          repr
-version:       0.4.1
+version:       0.4.1.1
 cabal-version: >= 1.6
 build-type:    Simple
 stability:     experimental
@@ -22,8 +22,8 @@ description:   This library allows you to render overloaded expressions to their
                @
 
 source-repository head
-  Type: darcs
-  Location: http://code.haskell.org/~basvandijk/code/repr
+  Type: git
+  Location: git://github.com/basvandijk/repr.git
 
 library
   build-depends: base                 >= 3       && < 4.4

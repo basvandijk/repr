@@ -22,6 +22,8 @@ description:   This library allows you to render overloaded expressions to their
                \"1.5 + 2.0 + (3.0 + negate 4.0 * (5.0 - pi / sqrt 6.0))\"
                @
 
+extra-source-files: README.markdown
+
 source-repository head
   Type: git
   Location: git://github.com/basvandijk/repr.git

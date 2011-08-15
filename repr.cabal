@@ -8,6 +8,7 @@ maintainer:    v.dijk.bas@gmail.com
 copyright:     (c) 2009-2011 Bas van Dijk
 license:       BSD3
 license-file:  LICENSE
+homepage:      https://github.com/basvandijk/repr/
 bug-reports:   https://github.com/basvandijk/repr/issues
 category:      Numeric, Text
 synopsis:      Render overloaded expressions to their textual representation.

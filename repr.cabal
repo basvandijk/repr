@@ -29,7 +29,7 @@ source-repository head
   Location: git://github.com/basvandijk/repr.git
 
 library
-  build-depends: base                 >= 3       && < 4.4
+  build-depends: base                 >= 3       && < 4.5
                , base-unicode-symbols >= 0.1.1   && < 0.3
                , random               >= 1.0     && < 1.1
                , string-combinators   >= 0.6     && < 0.7

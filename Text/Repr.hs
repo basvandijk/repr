@@ -6,6 +6,10 @@
            , DeriveDataTypeable
   #-}
 
+#if __GLASGOW_HASKELL__ >= 704
+{-# LANGUAGE Safe #-}
+#endif
+
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Text.Repr
@@ -252,7 +256,7 @@ instance Read α ⇒ Read (Repr α) where
 instance IsString α ⇒ IsString (Repr α) where
     fromString = liftA2 constant fromString fromShow
 
-instance Num α ⇒ Num (Repr α) where
+instance (Num α, Show α) ⇒ Num (Repr α) where
     PURE(fromInteger)
     INFX(L, 6, +)
     INFX(L, 6, -)
@@ -261,10 +265,10 @@ instance Num α ⇒ Num (Repr α) where
     APP(abs)
     APP(signum)
 
-instance Real α ⇒ Real (Repr α) where
+instance (Real α, Show α) ⇒ Real (Repr α) where
     TO(toRational)
 
-instance Integral α ⇒ Integral (Repr α) where
+instance (Integral α, Show α) ⇒ Integral (Repr α) where
     APP2(quot)
     APP2(rem)
     APP2(div)
@@ -273,12 +277,12 @@ instance Integral α ⇒ Integral (Repr α) where
     TUP(divMod)
     TO(toInteger)
 
-instance Fractional α ⇒ Fractional (Repr α) where
+instance (Fractional α, Show α) ⇒ Fractional (Repr α) where
     INFX(L, 7, /)
     APP(recip)
     PURE(fromRational)
 
-instance Floating α ⇒ Floating (Repr α) where
+instance (Floating α, Show α) ⇒ Floating (Repr α) where
     CONSTANT(pi)
     INFX(R, 8, **)
     APP2(logBase)
@@ -298,7 +302,7 @@ instance Floating α ⇒ Floating (Repr α) where
     APP(atanh)
     APP(acosh)
 
-instance RealFrac α ⇒ RealFrac (Repr α) where
+instance (RealFrac α, Show α) ⇒ RealFrac (Repr α) where
     TO(truncate)
     TO(round)
     TO(ceiling)
@@ -308,7 +312,7 @@ instance RealFrac α ⇒ RealFrac (Repr α) where
         let (n, f) = properFraction x
         in (n, repr f $ "snd" `apply` parens ("properFraction" <+> args [rx]))
 
-instance RealFloat α ⇒ RealFloat (Repr α) where
+instance (RealFloat α, Show α) ⇒ RealFloat (Repr α) where
     TO(floatRadix)
     TO(floatDigits)
     TO(floatRange)
@@ -371,7 +375,7 @@ instance Monoid α ⇒ Monoid (Repr α) where
 unzipReprs ∷ [Repr α] → ([α], [Renderer])
 unzipReprs = unzip ∘ map (extract &&& renderer)
 
-instance Bits α ⇒ Bits (Repr α) where
+instance (Bits α, Show α) ⇒ Bits (Repr α) where
     INFX(L, 7, .&.)
     INFX(L, 5, .|.)
     APP2(xor)
@@ -536,6 +540,3 @@ tup f fStr = \(Repr x rx) (Repr y ry) →
              in ( repr q $ "fst" `apply` s
                 , repr r $ "snd" `apply` s
                 )
-
-
--- The End ---------------------------------------------------------------------

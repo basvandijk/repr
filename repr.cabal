@@ -1,5 +1,5 @@
 name:          repr
-version:       0.4.1.1
+version:       0.4.1.2
 cabal-version: >= 1.6
 build-type:    Simple
 stability:     experimental
@@ -8,7 +8,7 @@ maintainer:    v.dijk.bas@gmail.com
 copyright:     (c) 2009-2011 Bas van Dijk
 license:       BSD3
 license-file:  LICENSE
-homepage:      https://github.com/basvandijk/repr/
+homepage:      https://github.com/basvandijk/repr
 bug-reports:   https://github.com/basvandijk/repr/issues
 category:      Numeric, Text
 synopsis:      Render overloaded expressions to their textual representation.
@@ -30,7 +30,7 @@ source-repository head
   Location: git://github.com/basvandijk/repr.git
 
 library
-  build-depends: base                 >= 3       && < 4.5
+  build-depends: base                 >= 3       && < 4.6
                , base-unicode-symbols >= 0.1.1   && < 0.3
                , random               >= 1.0     && < 1.1
                , string-combinators   >= 0.6     && < 0.7

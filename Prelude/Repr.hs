@@ -1,4 +1,8 @@
-{-# LANGUAGE UnicodeSyntax, NoImplicitPrelude, OverloadedStrings #-}
+{-# LANGUAGE CPP, UnicodeSyntax, NoImplicitPrelude, OverloadedStrings #-}
+
+#if __GLASGOW_HASKELL__ >= 704
+{-# LANGUAGE Safe #-}
+#endif
 
 --------------------------------------------------------------------------------
 -- |
@@ -75,6 +79,3 @@ fromIntegral = app Prelude.fromIntegral "fromIntegral"
 -- | Lifts @Prelude.'Prelude.realToFrac'@ into @'Repr's@
 realToFrac ∷ (Real α, Fractional β) ⇒ Repr α → Repr β
 realToFrac = app Prelude.realToFrac "realToFrac"
-
-
--- The End ---------------------------------------------------------------------

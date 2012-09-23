@@ -393,6 +393,9 @@ instance (Bits α, Show α) ⇒ Bits (Repr α) where
     APP2SHOW(shiftR)
     APP2SHOW(rotateL)
     APP2SHOW(rotateR)
+#if MIN_VERSION_base(4,6,0)
+    TO(popCount)
+#endif
 
 #if MIN_VERSION_base(4,2,0)
 instance HasResolution α ⇒ HasResolution (Repr α) where
